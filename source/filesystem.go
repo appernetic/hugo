@@ -1,9 +1,9 @@
-// Copyright © 2014 Steve Francia <spf@spf13.com>.
+// Copyright 2016 The Hugo Authors. All rights reserved.
 //
-// Licensed under the Simple Public License, Version 2.0 (the "License");
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// http://opensource.org/licenses/Simple-2.0
+// http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,14 +14,14 @@
 package source
 
 import (
-	"bytes"
-	"github.com/spf13/viper"
+	"github.com/spf13/hugo/hugofs"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/spf13/viper"
 
 	"github.com/spf13/hugo/helpers"
 	jww "github.com/spf13/jwalterweatherman"
@@ -61,14 +61,11 @@ func (f *Filesystem) Files() []*File {
 	return f.files
 }
 
+// add populates a file in the Filesystem.files
 func (f *Filesystem) add(name string, reader io.Reader) (err error) {
 	var file *File
 
-	//if f.Base == "" {
-	//file = NewFileWithContents(name, reader)
-	//} else {
 	file, err = NewFileFromAbs(f.Base, name, reader)
-	//}
 
 	if err == nil {
 		f.files = append(f.files, file)
@@ -76,53 +73,63 @@ func (f *Filesystem) add(name string, reader io.Reader) (err error) {
 	return err
 }
 
-func (f *Filesystem) getRelativePath(name string) (final string, err error) {
-	return helpers.GetRelativePath(name, f.Base)
-}
-
 func (f *Filesystem) captureFiles() {
-
 	walker := func(filePath string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
 
-		if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
-			link, err := filepath.EvalSymlinks(filePath)
-			if err != nil {
-				jww.ERROR.Printf("Cannot read symbolic link '%s', error was: %s", filePath, err)
-				return nil
-			}
-			linkfi, err := os.Stat(link)
-			if err != nil {
-				jww.ERROR.Printf("Cannot stat '%s', error was: %s", link, err)
-				return nil
-			}
-			if !linkfi.Mode().IsRegular() {
-				jww.ERROR.Printf("Symbolic links for directories not supported, skipping '%s'", filePath)
-			}
-			return nil
-		}
-
-		if fi.IsDir() {
-			if f.avoid(filePath) || isNonProcessablePath(filePath) {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-
-		if isNonProcessablePath(filePath) {
-			return nil
-		}
-		data, err := ioutil.ReadFile(filePath)
+		b, err := f.shouldRead(filePath, fi)
 		if err != nil {
 			return err
 		}
-		f.add(filePath, bytes.NewBuffer(data))
-		return nil
+		if b {
+			rd, err := NewLazyFileReader(filePath)
+			if err != nil {
+				return err
+			}
+			f.add(filePath, rd)
+		}
+		return err
 	}
 
-	filepath.Walk(f.Base, walker)
+	err := helpers.SymbolicWalk(hugofs.Source(), f.Base, walker)
+
+	if err != nil {
+		jww.ERROR.Println(err)
+	}
+
+}
+
+func (f *Filesystem) shouldRead(filePath string, fi os.FileInfo) (bool, error) {
+	if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
+		link, err := filepath.EvalSymlinks(filePath)
+		if err != nil {
+			jww.ERROR.Printf("Cannot read symbolic link '%s', error was: %s", filePath, err)
+			return false, nil
+		}
+		linkfi, err := os.Stat(link)
+		if err != nil {
+			jww.ERROR.Printf("Cannot stat '%s', error was: %s", link, err)
+			return false, nil
+		}
+		if !linkfi.Mode().IsRegular() {
+			jww.ERROR.Printf("Symbolic links for directories not supported, skipping '%s'", filePath)
+		}
+		return false, nil
+	}
+
+	if fi.IsDir() {
+		if f.avoid(filePath) || isNonProcessablePath(filePath) {
+			return false, filepath.SkipDir
+		}
+		return false, nil
+	}
+
+	if isNonProcessablePath(filePath) {
+		return false, nil
+	}
+	return true, nil
 }
 
 func (f *Filesystem) avoid(filePath string) bool {
@@ -136,18 +143,11 @@ func (f *Filesystem) avoid(filePath string) bool {
 
 func isNonProcessablePath(filePath string) bool {
 	base := filepath.Base(filePath)
-	if base[0] == '.' {
+	if strings.HasPrefix(base, ".") ||
+		strings.HasPrefix(base, "#") ||
+		strings.HasSuffix(base, "~") {
 		return true
 	}
-
-	if base[0] == '#' {
-		return true
-	}
-
-	if base[len(base)-1] == '~' {
-		return true
-	}
-
 	ignoreFiles := viper.GetStringSlice("IgnoreFiles")
 	if len(ignoreFiles) > 0 {
 		for _, ignorePattern := range ignoreFiles {

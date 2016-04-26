@@ -1,4 +1,5 @@
 ---
+lastmod: 2015-08-04
 date: 2014-05-26
 linktitle: Comments
 menu:
@@ -52,7 +53,7 @@ Users have noticed that enabling Disqus comments when running the Hugo web serve
         return;
 
     var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-    var disqus_shortname = '{{ .Site.Params.disqusShortname }}';
+    var disqus_shortname = '{{ .Site.DisqusShortname }}';
     dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
     (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
 })();
@@ -80,7 +81,7 @@ A few alternatives exist to [Disqus](https://disqus.com/):
 * [isso](http://posativ.org/isso/) (Self-hosted, Python)
 * [Kaiju](https://github.com/spf13/kaiju)
 
-## Kaiju 
+## Kaiju
 
 [Kaiju](https://github.com/spf13/kaiju) is an open-source project started by [spf13](http://spf13.com/) (Hugo’s author) to bring easy and fast real time discussions to the web.
 

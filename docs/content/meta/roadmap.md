@@ -2,6 +2,7 @@
 aliases:
 - /doc/roadmap/
 - /meta/roadmap/
+lastmod: 2015-02-16
 date: 2013-07-01
 menu:
   main:
@@ -18,7 +19,6 @@ In no particular order, here is what we are working on:
  * Import from other website systems
     * from Drupal (See https://bitbucket.org/rickb777/drupal2hugo by Rick Beton (@rickb777))
     * from WordPress (See [#100][], especially https://github.com/SchumacherFM/wordpress-to-hugo-exporter by Cyrill Schumacher (@SchumacherFM), but volunteers are needed to make it work with latest versions of WordPress.)
-    * from Jekyll (See [#101][])
  * An interactive web based editor (See http://discuss.gohugo.io/t/web-based-editor/155)
  * Additional [themes](https://github.com/spf13/hugoThemes) (always on-going, contributions welcome!)
  * Dynamic image resizing via shortcodes
@@ -33,3 +33,5 @@ In no particular order, here is what we are working on:
 [#470]: https://github.com/spf13/hugo/issues/470 "Support for AsciiDoc · Issue #470 · spf13/hugo"
 [#826]: https://github.com/spf13/hugo/pull/826 "Experimental AsciiDoc support with external helpers by anthonyfok · Pull Request #826 · spf13/hugo"
 [#472]: https://github.com/spf13/hugo/issues/472 "support for using reST · Issue #472 · spf13/hugo"
+
+> Feel free to [contribute]({{< relref "tutorials/how-to-contribute-to-hugo.md" >}}) or open a [new issue](https://github.com/spf13/hugo/issues/new) if you have an idea for a new feature.)

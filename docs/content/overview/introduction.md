@@ -1,4 +1,5 @@
 ---
+lastmod: 2016-02-20
 date: 2013-07-01
 linktitle: Introduction
 menu:
@@ -12,8 +13,7 @@ weight: 5
 ## What is Hugo?
 
 Hugo is a general-purpose website framework. Technically speaking, Hugo is
-a static site generator. This means that, unlike systems like WordPress,
-Ghost and Drupal, which run on your web server expensively building a page
+a static site generator. Unlike other systems which dynamically build a page
 every time a visitor requests one, Hugo does the building when you create
 your content. Since websites are viewed far more often than they are
 edited, Hugo is optimized for website viewing while providing a great
@@ -21,7 +21,8 @@ writing experience.
 
 Sites built with Hugo are extremely fast and very secure. Hugo sites can
 be hosted anywhere, including [Heroku][], [GoDaddy][], [DreamHost][],
-[GitHub Pages][], [Google Cloud Storage][], [Amazon S3][] and [CloudFront][], and work well with CDNs.
+[GitHub Pages][], [Surge][], [Aerobatic][], [Google Cloud Storage][],
+[Amazon S3][] and [CloudFront][], and work well with CDNs.
 Hugo sites run without dependencies on expensive runtimes like Ruby,
 Python or PHP and without dependencies on any databases.
 
@@ -29,9 +30,11 @@ Python or PHP and without dependencies on any databases.
 [GoDaddy]: https://www.godaddy.com/
 [DreamHost]: http://www.dreamhost.com/
 [GitHub Pages]: https://pages.github.com/
+[Aerobatic]: https://www.aerobatic.com/
 [Google Cloud Storage]: http://cloud.google.com/storage/
 [Amazon S3]: http://aws.amazon.com/s3/
 [CloudFront]: http://aws.amazon.com/cloudfront/ "Amazon CloudFront"
+[Surge]: https://surge.sh
 
 We think of Hugo as the ideal website creation tool. With nearly instant
 build times and the ability to rebuild whenever a change is made, Hugo
@@ -70,7 +73,7 @@ of pages with a fraction of the memory and CPU needed for a dynamic site.
 Hugo has two components to help you build and test your web site. The
 one that you'll probably use most often is the built-in HTTP server.
 When you run `hugo server`, Hugo renders all of your content into
-HTML files and then runs a HTTP server on your computer so that you
+HTML files and then runs an HTTP server on your computer so that you
 can see what the pages look like.
 
 The second component is used when you're ready to publish your web
@@ -85,14 +88,14 @@ links work properly with most hosting companies.
 
 ## What does Hugo do?
 
-In technical terms, Hugo takes a source directory of Markdown files and
+In technical terms, Hugo takes a source directory of files and
 templates and uses these as input to create a complete website.
 
 Hugo boasts the following features:
 
 ### General
 
-  * Extremely fast build times (~1&nbsp;ms per page)
+  * Extremely fast build times (~1 ms per page)
   * Completely cross platform: Runs on <i class="fa fa-apple"></i>&nbsp;Mac OS&nbsp;X, <i class="fa fa-linux"></i>&nbsp;Linux, <i class="fa fa-windows"></i>&nbsp;Windows, and more!
   * Easy [installation](/overview/installing/)
   * Render changes [on the fly](/overview/usage/) with [LiveReload](/extras/livereload/) as you develop
@@ -114,7 +117,8 @@ Hugo boasts the following features:
 
 ### Content
 
-  * Content written in [Markdown](/content/example/)
+  * Native support for content written in [Markdown](/content/example/)
+    * Support for other languages through _external helpers_, see [supported formats](/content/supported-formats)
   * Support for TOML, YAML and JSON metadata in [frontmatter](/content/front-matter/)
   * Completely [customizable homepage](/layout/homepage/)
   * Support for multiple [content types](/content/types/)
@@ -126,6 +130,7 @@ Hugo boasts the following features:
 ### Additional Features
 
   * Integrated [Disqus](https://disqus.com/) comment support
+  * Integrated [Google Analytics](https://google-analytics.com/) support
   * Automatic [RSS](/layout/rss/) creation
   * Support for [Go](http://golang.org/pkg/html/template/), [Amber](https://github.com/eknkc/amber) and [Ace](http://ace.yoss.si/) HTML templates
   * Syntax [highlighting](/extras/highlighting/) powered by [Pygments](http://pygments.org/)
@@ -182,4 +187,3 @@ as I have writing it.
  * [Join the Mailing List](/community/mailing-list/)
  * [Star us on GitHub](https://github.com/spf13/hugo)
  * [Discussion Forum](http://discuss.gohugo.io/)
-

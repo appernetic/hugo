@@ -1,6 +1,7 @@
 ---
 aliases:
 - /layout/homepage/
+lastmod: 2015-08-04
 date: 2013-07-01
 menu:
   main:
@@ -13,7 +14,7 @@ weight: 50
 ---
 
 The home page of a website is often formatted differently than the other
-pages. In Hugo you can define your own homepage template. 
+pages. In Hugo you can define your own homepage template.
 
 Homepage is of the type "node" and have all the [node
 variables](/templates/variables/) and [site

@@ -1,6 +1,7 @@
 ---
 aliases:
 - /doc/pagination/
+lastmod: 2015-07-16
 date: 2014-01-01
 menu:
   main:
@@ -35,11 +36,16 @@ There are two ways to configure and use a `.Paginator`:
 
 For a given **Node**, it's one of the options above. The `.Paginator` is static and cannot change once created.
 
-
 The global page size setting (`Paginate`) can be overridden by providing a positive integer as the last argument. The examples below will give five items per page:
 
 * `{{ range (.Paginator 5).Pages }}`
 * `{{ $paginator := .Paginate (where .Data.Pages "Type" "post") 5 }}`
+
+It is also possible to use the `GroupBy` functions in combination with pagination:
+
+```
+{{ range (.Paginate (.Data.Pages.GroupByDate "2006")).PageGroups  }}
+```
 
 ## Build the navigation
 

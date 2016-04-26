@@ -1,4 +1,5 @@
 ---
+lastmod: 2015-12-23
 date: 2014-05-14T02:13:50Z
 menu:
   main:
@@ -16,7 +17,7 @@ you can start a content file with the date and title automatically set.
 While this is a welcome feature, active writers need more.
 
 Hugo presents the concept of archetypes, which are archetypal content files
-with pre-configured [front matter](content/front-matter) which will
+with pre-configured [front matter](/content/front-matter) which will
 populate each new content file whenever you run the `hugo new` command.
 
 
@@ -29,10 +30,12 @@ We will use ‘tags’ and ‘categories’ for our taxonomies, so let's create 
 
 #### archetypes/default.md
 
-    +++
-    tags = ["x", "y"]
-    categories = ["x", "y"]
-    +++
+```toml
++++
+tags = ["x", "y"]
+categories = ["x", "y"]
++++
+```
 
 > __CAVEAT:__  Some editors (e.g. Sublime, Emacs) do not insert an EOL (end-of-line) character at the end of the file (i.e. EOF).  If you get a [strange EOF error](/troubleshooting/strange-eof-error/) when using `hugo new`, please open each archetype file (i.e.&nbsp;`archetypes/*.md`) and press <kbd>Enter</kbd> to type a carriage return after the closing `+++` or `---` as necessary.
 
@@ -47,17 +50,50 @@ Hugo would create the file with the following contents:
 
 #### content/post/my-new-post.md
 
-    +++
-    title = "my new post"
-    date = "2015-01-12T19:20:04-07:00"
-    tags = ["x", "y"]
-    categories = ["x", "y"]
-    +++
+```toml
++++
+title = "my new post"
+date = "2015-01-12T19:20:04-07:00"
+tags = ["x", "y"]
+categories = ["x", "y"]
++++
+```
 
 We see that the `title` and `date` variables have been added, in addition to the `tags` and `categories` variables which were carried over from `archetype/default.md`.
 
-Congratulations!  We have successfully created an archetype and used it for our new contents.  That's all there is to it!
+Congratulations!  We have successfully created an archetype and used it for our new contents. But wait, what if I want to have different variables for another content type, like musicians? No problem.
 
+### Creating custom archetypes
+
+Earlier you created a new content type by adding a new subfolder to the content directory. In our case it's name would be `content/musician`. To use the corresponding archetype you just need to create a file named after the content type called `musician.md` in the `archetypes` directory, similar to the one below.
+
+#### archetypes/musician.md
+
+```toml
++++
+name = ""
+bio = ""
+genre = ""
++++
+```
+
+Now let's create a new musician.
+
+    $ hugo new musician/mozart.md
+
+This time, Hugo recognizes the custom archetype and uses it instead of the default one. So the generated file's frontmatter now includes the variables `name`, `bio` and `genre`.
+
+#### content/musician/mozart.md
+
+```toml
++++
+title = "mozart"
+date = "2015-08-24T13:04:37+02:00"
+name = ""
+bio = ""
+genre = ""
++++
+```
 
 ## Using a different front matter format
 

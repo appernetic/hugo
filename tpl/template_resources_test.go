@@ -1,9 +1,9 @@
-// Copyright © 2013-14 Steve Francia <spf@spf13.com>.
+// Copyright 2016 The Hugo Authors. All rights reserved.
 //
-// Licensed under the Simple Public License, Version 2.0 (the "License");
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// http://opensource.org/licenses/Simple-2.0
+// http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -58,7 +58,7 @@ func TestScpCache(t *testing.T) {
 			t.Errorf("There is content where there should not be anything: %s", string(c))
 		}
 
-		err = resWriteCache(test.path, test.content, fs)
+		err = resWriteCache(test.path, test.content, fs, test.ignore)
 		if err != nil {
 			t.Errorf("Error writing cache: %s", err)
 		}
@@ -114,7 +114,11 @@ func TestScpGetLocal(t *testing.T) {
 func getTestServer(handler func(w http.ResponseWriter, r *http.Request)) (*httptest.Server, *http.Client) {
 	testServer := httptest.NewServer(http.HandlerFunc(handler))
 	client := &http.Client{
-		Transport: &http.Transport{Proxy: func(*http.Request) (*url.URL, error) { return url.Parse(testServer.URL) }},
+		Transport: &http.Transport{Proxy: func(r *http.Request) (*url.URL, error) {
+			// Remove when https://github.com/golang/go/issues/13686 is fixed
+			r.Host = "gohugo.io"
+			return url.Parse(testServer.URL)
+		}},
 	}
 	return testServer, client
 }
@@ -210,7 +214,7 @@ type wd struct {
 
 func testRetryWhenDone() wd {
 	cd := viper.GetString("CacheDir")
-	viper.Set("CacheDir", helpers.GetTempDir("", hugofs.SourceFs))
+	viper.Set("CacheDir", helpers.GetTempDir("", hugofs.Source()))
 	var tmpSleep time.Duration
 	tmpSleep, resSleep = resSleep, time.Millisecond
 	return wd{func() {
@@ -238,7 +242,7 @@ func TestGetJSONFailParse(t *testing.T) {
 	defer os.Remove(getCacheFileID(url))
 
 	want := map[string]interface{}{"gomeetup": []interface{}{"Sydney", "San Francisco", "Stockholm"}}
-	have := GetJSON(url)
+	have := getJSON(url)
 	assert.NotNil(t, have)
 	if have != nil {
 		assert.EqualValues(t, want, have)
@@ -266,8 +270,8 @@ func TestGetCSVFailParseSep(t *testing.T) {
 	url := ts.URL + "/test.csv"
 	defer os.Remove(getCacheFileID(url))
 
-	want := [][]string{[]string{"gomeetup", "city"}, []string{"yes", "Sydney"}, []string{"yes", "San Francisco"}, []string{"yes", "Stockholm"}}
-	have := GetCSV(",", url)
+	want := [][]string{{"gomeetup", "city"}, {"yes", "Sydney"}, {"yes", "San Francisco"}, {"yes", "Stockholm"}}
+	have := getCSV(",", url)
 	assert.NotNil(t, have)
 	if have != nil {
 		assert.EqualValues(t, want, have)
@@ -297,8 +301,8 @@ func TestGetCSVFailParse(t *testing.T) {
 	url := ts.URL + "/test.csv"
 	defer os.Remove(getCacheFileID(url))
 
-	want := [][]string{[]string{"gomeetup", "city"}, []string{"yes", "Sydney"}, []string{"yes", "San Francisco"}, []string{"yes", "Stockholm"}}
-	have := GetCSV(",", url)
+	want := [][]string{{"gomeetup", "city"}, {"yes", "Sydney"}, {"yes", "San Francisco"}, {"yes", "Stockholm"}}
+	have := getCSV(",", url)
 	assert.NotNil(t, have)
 	if have != nil {
 		assert.EqualValues(t, want, have)

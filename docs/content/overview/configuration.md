@@ -1,6 +1,7 @@
 ---
 aliases:
 - /doc/configuration/
+lastmod: 2015-12-08
 date: 2013-07-01
 linktitle: Configuration
 menu:
@@ -24,6 +25,12 @@ then look for a `config.yaml` file, followed by a `config.json` file.
 The config file is a site-wide config. The config file provides directions to
 hugo on how to build the site as well as site-wide parameters and menus.
 
+Site configuration can also be set as environment variables in your operating system. The command below will work on *nix systems and overrides the site title. Note that all the variable names must be prefixed with "HUGO_".
+
+```bash
+env HUGO_TITLE="Some Title" hugo
+```
+
 ## Examples
 
 The following is an example of a typical yaml config file:
@@ -32,7 +39,8 @@ The following is an example of a typical yaml config file:
     baseurl: "http://yoursite.example.com/"
     ...
 
-The following is an example of a toml config file with some of the default values. Values under `[params]` will populate the `.Site.Params` variable for use in templates:
+The following is an example of a toml config file with some of the default values.
+Values under `[params]` will populate the `.Site.Params` variable for use in templates:
 
     contentdir = "content"
     layoutdir = "layouts"
@@ -40,16 +48,16 @@ The following is an example of a toml config file with some of the default value
     builddrafts = false
     baseurl = "http://yoursite.example.com/"
     canonifyurls = true
-    
+
     [taxonomies]
       category = "categories"
       tag = "tags"
-    
+
     [params]
       description = "Tesla's Awesome Hugo Site"
       author = "Nikola Tesla"
 
-Here is a yaml configuration file which sets a few more options
+Here is a yaml configuration file which sets a few more options:
 
     ---
     baseurl: "http://yoursite.example.com/"
@@ -73,14 +81,14 @@ Following is a list of Hugo-defined variables that you can configure and their c
 
     ---
     archetypedir:               "archetype"
-    # hostname (and path) to the root eg. http://spf13.com/
+    # hostname (and path) to the root, e.g. http://spf13.com/
     baseURL:                    ""
     # include content marked as draft
     buildDrafts:                false
     # include content with publishdate in the future
     buildFuture:                false
     # enable this to make all relative URLs relative to content root. Note that this does not affect absolute URLs.
-    relativeURLs: 		false
+    relativeURLs:               false
     canonifyURLs:               false
     # config file (default is path/config.yaml|json|toml)
     config:                     "config.toml"
@@ -88,17 +96,24 @@ Following is a list of Hugo-defined variables that you can configure and their c
     dataDir:                    "data"
     defaultExtension:           "html"
     defaultLayout:              "post"
-    # filesystem path to write files to
-    destination:                ""
     disableLiveReload:          false
     # Do not build RSS files
     disableRSS:                 false
     # Do not build Sitemap file
     disableSitemap:             false
+    # Build robots.txt file
+    enableRobotsTXT:            false
+    # Do not render 404 page
+    disable404:                 false
     # edit new content with this editor, if provided
     editor:                     ""
+    # Enable Emoji emoticons support for page content.
+    # See www.emoji-cheat-sheet.com
+    enableEmoji:				false
     footnoteAnchorPrefix:       ""
     footnoteReturnLinkContents: ""
+    # google analytics tracking id
+    googleAnalytics:            ""
     languageCode:               ""
     layoutdir:                  "layouts"
     # Enable Logging
@@ -114,40 +129,51 @@ Following is a list of Hugo-defined variables that you can configure and their c
     paginatePath:               "page"
     permalinks:
     # Pluralize titles in lists using inflect
-    pluralizeListTitles:         true
+    pluralizeListTitles:        true
+    # Preserve special characters in taxonomy names ("Gérard Depardieu" vs "Gerard Depardieu")
+    preserveTaxonomyNames:      false
+    # filesystem path to write files to
     publishdir:                 "public"
+    # enables syntax guessing for code fences without specified language
+    pygmentsCodeFencesGuessSyntax: false
     # color-codes for highlighting derived from this style
     pygmentsStyle:              "monokai"
     # true: use pygments-css or false: color-codes directly
     pygmentsUseClasses:         false
-    sitemap:                    ""
+    # default sitemap configuration map
+    sitemap:
     # filesystem path to read files relative from
     source:                     ""
     staticdir:                  "static"
     # display memory and timing of different steps of the program
     stepAnalysis:               false
-    # theme to use (located in /themes/THEMENAME/)
+    # theme to use (located by default in /themes/THEMENAME/)
+    themesdir = "themes"
     theme:                      ""
     title:                      ""
     # if true, use /filename.html instead of /filename/
     uglyURLs:                   false
+    # Do not make the url/path to lowercase
+    disablePathToLower:         false
+    # if true, auto-detect Chinese/Japanese/Korean Languages in the content. (.Summary and .WordCount can work properly in CJKLanguage)
+    hasCJKLanguage              false
     # verbose output
     verbose:                    false
     # verbose logging
     verboseLog:                 false
     # watch filesystem for changes and recreate as needed
-    watch:                      false
+    watch:                      true
     ---
 
 ## Ignore files on build
 
-The following inside `config.toml` will ignore files ending with `.foo` and `.boo` when building with `hugo`.
+The following inside `config.toml` will ignore files ending with `.foo` and `.boo` when building with `hugo`:
 
 ```
 ignoreFiles = [ "\\.foo$", "\\.boo$" ]
 ```
 
-The above is is a list of Reqular Expressions, but note the escaping of the `\` to make TOML happy.
+The above is a list of Regular Expressions, but note the escaping of the `\` to make TOML happy.
 
 
 
@@ -166,24 +192,36 @@ But Hugo does expose some options---as listed in the table below, matched with t
 
 <tbody>
 <tr>
-<td><code>angledQuotes</code></td>
+<td><code><strong>smartypants</strong></code></td>
+<td><code>true</code></td>
+<td><code>HTML_USE_SMARTYPANTS</code></td>
+</tr>
+<tr>
+<td class="purpose-title">Purpose:</td>
+<td class="purpose-description" colspan="2">Enable/Disable smart punctuation substitutions such as smart quotes, smart dashes, etc.
+May be fine-tuned with the <code>angledQuotes</code>, <code>fractions</code>, <code>smartDashes</code> and <code>latexDashes</code> flags below.</td>
+</tr>
+
+<tr>
+<td><code><strong>angledQuotes</strong></code></td>
 <td><code>false</code></td>
 <td><code>HTML_SMARTYPANTS_ANGLED_QUOTES</code></td>
 </tr>
 <tr>
 <td class="purpose-title">Purpose:</td>
-<td class="purpose-description" colspan="2">Enable smart angled double quotes <small>(e.g.&nbsp;<code>"Hugo"</code> renders to «Hugo» instead of “Hugo”)</small></td>
+<td class="purpose-description" colspan="2">Enable/Disable smart angled double quotes.<br>
+<small><strong>Example:</strong>&nbsp;<code>"Hugo"</code> renders to «Hugo» instead of “Hugo”.</small></td>
 </tr>
 
 <tr>
-<td><code>fractions</code></td>
+<td><code><strong>fractions</strong></code></td>
 <td><code>true</code></td>
 <td><code>HTML_SMARTYPANTS_FRACTIONS</code></td>
 </tr>
 <tr>
 <td class="purpose-title">Purpose:</td>
-<td class="purpose-description" colspan="2">Enable smart fractions
-<small>(e.g.&nbsp;<code>5/12</code> renders to <sup>5</sup>&frasl;<sub>12</sub> (<code>&lt;sup&gt;5&lt;/sup&gt;&amp;frasl;&lt;sub&gt;12&lt;/sub&gt;</code>))
+<td class="purpose-description" colspan="2">Enable/Disable smart fractions.<br>
+<small><strong>Example:</strong>&nbsp;<code>5/12</code> renders to <sup>5</sup>&frasl;<sub>12</sub> (<code>&lt;sup&gt;5&lt;/sup&gt;&amp;frasl;&lt;sub&gt;12&lt;/sub&gt;</code>)<br>
 <strong>Caveat:</strong> Even with <code>fractions = false</code>,
 Blackfriday would still convert 1/2, 1/4 and 3/4 to ½&nbsp;(<code>&amp;frac12;</code>),
 ¼&nbsp;(<code>&amp;frac14;</code>) and ¾&nbsp;(<code>&amp;frac34;</code>) respectively,
@@ -191,39 +229,114 @@ but only these three.</small></td>
 </tr>
 
 <tr>
-<td><code>plainIdAnchors</code></td>
+<td><code><strong>smartDashes</strong></code></td>
+<td><code>true</code></td>
+<td><code>HTML_SMARTYPANTS_DASHES</code></td>
+</tr>
+<tr>
+<td class="purpose-title">Purpose:</td>
+<td class="purpose-description" colspan="2">Enable/Disable smart dashes, i.e. turning hyphens into en&nbsp;dash or em&nbsp;dash.<br>
+Its behavior can be modified with the <code>latexDashes</code> flag listed below.</td>
+</tr>
+
+<tr>
+<td><code><strong>latexDashes</strong></code></td>
+<td><code>true</code></td>
+<td><code>HTML_SMARTYPANTS_LATEX_DASHES</code></td>
+</tr>
+<tr>
+<td class="purpose-title">Purpose:</td>
+<td class="purpose-description" colspan="2">Choose between LaTeX-style smart dashes and “conventional” smart dashes.<br>
+<strong>If <code>true</code>,</strong> <code>--</code> is translated into “&ndash;” (<code>&amp;ndash;</code>), and <code>---</code> is translated into “&mdash;” (<code>&amp;mdash;</code>).<br>
+<strong>If <code>false</code>,</strong> <code>--</code> is translated into “&mdash;” (<code>&amp;mdash;</code>), whereas a <em>spaced</em> single hyphen between two words is turned into an en&nbsp;dash, e.g.&nbsp;<code>12 June - 3 July</code> becomes <code>12 June &amp;ndash; 3 July</code>.</td>
+</tr>
+
+<tr style="height: 0.5em;"></tr>
+
+<tr>
+<td><code><strong>hrefTargetBlank</strong></code></td>
 <td><code>false</code></td>
+<td><code>HTML_HREF_TARGET_BLANK</code></td>
+</tr>
+<tr>
+<td class="purpose-title">Purpose:</td>
+<td class="purpose-description" colspan="2">Open external links in a new window/tab.</td>
+</tr>
+
+<tr>
+<td><code><strong>plainIDAnchors</strong></code></td>
+<td><code>true</code></td>
 <td><code>FootnoteAnchorPrefix</code> and <code>HeaderIDSuffix</code></td>
 </tr>
 <tr>
 <td class="purpose-title">Purpose:</td>
-<td class="purpose-description" colspan="2">If <code>true</code>, then header and footnote IDs are generated without the document ID <small>(e.g.&nbsp;<code>#my-header</code> instead of <code>#my-header:bec3ed8ba720b9073ab75abcf3ba5d97</code>)</small></td>
+<td class="purpose-description" colspan="2">If <code>true</code>, then header and footnote IDs are generated without the document ID.<br>
+<small><strong>Example:</strong>&nbsp;<code>#my-header</code> instead of <code>#my-header:bec3ed8ba720b9073ab75abcf3ba5d97</code>.</small></td>
 </tr>
 
+<tr style="height: 0.5em;"></tr>
+
 <tr>
-<td><code>extensions</code></td>
+<td><code><strong>extensions</strong></code></td>
 <td><code>[]</code></td>
 <td><code>EXTENSION_*</code></td>
 </tr>
 <tr>
 <td class="purpose-title">Purpose:</td>
-<td class="purpose-description" colspan="2">Use non-default additional extensions <small>(e.g.&nbsp;Add <code>"hardLineBreak"</code> to use <code>EXTENSION_HARD_LINE_BREAK</code>)</small></td>
+<td class="purpose-description" colspan="2">Use non-default additional extensions.<br>
+<small><strong>Example:</strong>&nbsp;Add <code>"hardLineBreak"</code> to use <code>EXTENSION_HARD_LINE_BREAK</code>.</small></td>
 </tr>
 
 <tr>
-<td><code>extensionsmask</code></td>
+<td><code><strong>extensionsmask</strong></code></td>
 <td><code>[]</code></td>
 <td><code>EXTENSION_*</code></td>
 </tr>
 <tr>
 <td class="purpose-title">Purpose:</td>
-<td class="purpose-description" colspan="2">Extensions in this option won't be loaded. <small>(e.g.&nbsp;Add <code>"autoHeaderIds"</code> to disable <code>EXTENSION_AUTO_HEADER_IDS</code>)</small></td>
+<td class="purpose-description" colspan="2">Extensions in this option won't be loaded.<br>
+<small><strong>Example:</strong>&nbsp;Add <code>"autoHeaderIds"</code> to disable <code>EXTENSION_AUTO_HEADER_IDS</code>.</small></td>
 </tr>
+
+<tr>
+<td><code><strong>sourceRelativeLinksEval</strong></code></td>
+<td><code>false</code></td>
+<td><code>none</code></td>
+</tr>
+<tr>
+<td class="purpose-title">Purpose:</td>
+<td class="purpose-description" colspan="2">Source file based relative linking (a la Github).<br>
+Relative links to markdown and static files within a page will be evaluated relative to the
+location of that page, and then converted to html links during rendering. For example,
+`[example](../other/page.md)` in `content/total/overview.md` will be linked to
+`content/other/overview.md`, and then rendered to `/other/overview/` in the HTML output.
+</td>
+</tr>
+
+<tr>
+<td><code><strong>sourceRelativeLinksProjectFolder</strong></code></td>
+<td><code>"/docs/content"</code></td>
+<td><code>none</code></td>
+</tr>
+<tr>
+<td class="purpose-title">Purpose:</td>
+<td class="purpose-description" colspan="2">Source file based relative linking Hugo Project sub-folder.<br>
+When `sourceRelativeLinksEval` is enabled, source level paths may contain an absolute respository path to the
+markdown or static file which needs to be removed before trying to match it with the intended link.
+ For example, if your documentation is in `/docs/content`, then
+`[example](/docs/content/other/page.md)` in `/docs/content/total/overview.md` will be linked to
+`/docs/content/other/overview.md`, and then rendered to `/other/overview/` in the HTML output.
+</td>
+</tr>
+
 </tbody>
 </table>
 
 
-**Note** that these flags must be grouped under the `blackfriday` key and can be set on **both site and page level**. If set on page, it will override the site setting.  Example:
+**Notes**
+
+1. These flags are **very case-sensitive** (as of Hugo v0.15)!
+2. These flags must be grouped under the `blackfriday` key and can be set on **both site and page level**. If set on page, it will override the site setting.  Example:
 
 <table class="table">
 <thead>
@@ -232,26 +345,20 @@ but only these three.</small></td>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td><pre><code>[blackfriday]
+<tr style="vertical-align: top;">
+<td style="width: 50%;"><pre><code>[blackfriday]
   angledQuotes = true
   fractions = false
-  plainIdAnchors = true
+  plainIDAnchors = true
   extensions = ["hardLineBreak"]
 </code></pre></td>
 <td><pre><code>blackfriday:
   angledQuotes: true
   fractions: false
-  plainIdAnchors: true
+  plainIDAnchors: true
   extensions:
     - hardLineBreak
 </code></pre></td>
 </tr>
 </tbody>
 </table>
-
-## Notes
-
-Config changes are not reflected with [LiveReload](/extras/livereload/).
-
-Please restart `hugo server --watch` whenever you make a config change.

@@ -2,6 +2,7 @@
 aliases:
 - /doc/debugging/
 - /layout/debugging/
+lastmod: 2015-05-25
 date: 2015-05-22
 linktitle: Debugging
 menu:
@@ -52,4 +53,18 @@ you're looping through look like?
     {{/* The context, ".", is now a Page */}}
     {{ printf "%#v" . }}
 {{ end }}
+```
+
+### Why do I have no variables defined?
+
+Check that you are passing variables in the `partial` function. For example
+
+```
+{{ partial "header" }}
+```
+
+will render the header partial, but the header partial will not have access to any variables. You need to pass variables explicitly. For example:
+
+```
+{{ partial "header" . }}
 ```

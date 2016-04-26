@@ -1,3 +1,16 @@
+// Copyright 2015 The Hugo Authors. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package transform
 
 import (
@@ -29,7 +42,6 @@ type absurllexer struct {
 	width int // width of last element
 
 	matchers []absURLMatcher
-	state    stateFunc
 
 	ms      matchState
 	matches [3]bool // track matches of the 3 prefixes
@@ -72,9 +84,9 @@ func (l *absurllexer) match(r rune) {
 			if r == p.r[l.idx] {
 				l.matches[j] = true
 				found = true
-				if l.checkMatchState(r, j) {
-					return
-				}
+				// checkMatchState will only return true when r=='=', so
+				// we can safely ignore the return value here.
+				l.checkMatchState(r, j)
 			}
 		}
 
@@ -185,7 +197,7 @@ func checkCandidateSrcset(l *absurllexer) {
 		section := l.content[l.pos+len(m.quote) : l.pos+posLastQuote+1]
 
 		fields := bytes.Fields(section)
-		l.w.Write([]byte(m.quote))
+		l.w.Write(m.quote)
 		for i, f := range fields {
 			if f[0] == '/' {
 				l.w.Write(l.path)
@@ -235,9 +247,6 @@ func (l *absurllexer) replace() {
 						p = prefixes[i]
 						l.matches[i] = false
 					}
-				}
-				if p == nil {
-					panic("illegal state: curr is nil when state is full")
 				}
 				l.ms = matchStateNone
 				p.f(l)

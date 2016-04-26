@@ -1,3 +1,16 @@
+// Copyright 2015 The Hugo Authors. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package hugolib
 
 import (
@@ -40,7 +53,7 @@ var testdataPermalinks = []struct {
 
 func TestPermalinkValidation(t *testing.T) {
 	for _, item := range testdataPermalinks {
-		pp := PathPattern(item.spec)
+		pp := pathPattern(item.spec)
 		have := pp.validate()
 		if have == item.valid {
 			continue
@@ -56,7 +69,7 @@ func TestPermalinkValidation(t *testing.T) {
 }
 
 func TestPermalinkExpansion(t *testing.T) {
-	page, err := NewPageFrom(strings.NewReader(SIMPLE_PAGE_JSON), "blue/test-page.md")
+	page, err := NewPageFrom(strings.NewReader(simplePageJSON), "blue/test-page.md")
 	if err != nil {
 		t.Fatalf("failed before we began, could not parse SIMPLE_PAGE_JSON: %s", err)
 	}
@@ -64,7 +77,7 @@ func TestPermalinkExpansion(t *testing.T) {
 		if !item.valid {
 			continue
 		}
-		pp := PathPattern(item.spec)
+		pp := pathPattern(item.spec)
 		result, err := pp.Expand(page)
 		if err != nil {
 			t.Errorf("failed to expand page: %s", err)

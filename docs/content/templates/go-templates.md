@@ -2,6 +2,7 @@
 aliases:
 - /layout/go-templates/
 - /layouts/go-templates/
+lastmod: 2015-11-30
 date: 2013-07-01
 menu:
   main:
@@ -296,6 +297,38 @@ access this from within the loop, you will likely want to do one of the followin
     > You may, of course, recover from this mischief by using `{{ $ := . }}`
     > in a global context to reset `$` to its default value.
 
+## Whitespace
+
+Go 1.6 includes the ability to trim the whitespace from either side of a Go tag by including a hyphen (`-`) and space immediately beside the corresponding `{{` or `}}` delimiter.
+
+For instance, the following Go template:
+
+```html
+<div>
+  {{ .Title }}
+</div>
+```
+
+will include the newlines and horizontal tab in its HTML output:
+
+```html
+<div>
+  Hello, World!
+</div>
+```
+
+whereas using
+
+```html
+<div>
+  {{- .Title -}}
+</div>
+```
+
+in that case will output simply `<div>Hello, World!</div>`.
+
+Go considers the following characters as whitespace: space, horizontal tab, carriage return and newline.
+
 # Hugo Parameters
 
 Hugo provides the option of passing values to the template language
@@ -320,6 +353,7 @@ Here is the example front matter:
 ```
 ---
 title: "Permalinks"
+lastmod: 2015-11-30
 date: "2013-11-18"
 aliases:
   - "/doc/permalinks/"
@@ -382,7 +416,7 @@ so, such as in this example:
 ```
 <nav class="recent">
   <h1>Recent Posts</h1>
-  <ul>{{range first .Site.Params.SidebarRecentLimit .Site.Recent}}
+  <ul>{{range first .Site.Params.SidebarRecentLimit .Site.Pages}}
     <li><a href="{{.RelPermalink}}">{{.Title}}</a></li>
   {{end}}</ul>
 </nav>

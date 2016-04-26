@@ -1,12 +1,13 @@
 ---
 aliases:
 - /layout/chrome/
+lastmod: 2016-01-01
 date: 2013-07-01
 menu:
   main:
     parent: layout
 next: /templates/rss
-prev: /templates/views
+prev: /templates/blocks/
 title: Partial Templates
 weight: 80
 toc: true
@@ -36,7 +37,7 @@ like good names to use for inclusion in your other templates.
 By ensuring that we only reference [variables](/layout/variables/)
 used for both nodes and pages, we can use the same partials for both.
 
-## Partial vs Template 
+## Partial vs Template
 
 Version v0.12 of Hugo introduced the `partial` call inside the template system.
 This is a change to the way partials were handled previously inside the
@@ -77,7 +78,7 @@ This footer template is used for [spf13.com](http://spf13.com/):
       <div>
         <p>
         &copy; 2013-14 Steve Francia.
-        <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons Attribution">Some rights reserved</a>; 
+        <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons Attribution">Some rights reserved</a>;
         please attribute properly and link back. Hosted by <a href="http://servergrove.com">ServerGrove</a>.
         </p>
       </div>
@@ -90,7 +91,7 @@ This footer template is used for [spf13.com](http://spf13.com/):
 
       (function() {
         var ga = document.createElement('script');
-        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 
+        ga.src = ('https:' == document.location.protocol ? 'https://ssl' :
             'http://www') + '.google-analytics.com/ga.js';
         ga.setAttribute('async', 'true');
         document.documentElement.firstChild.appendChild(ga);
@@ -100,11 +101,27 @@ This footer template is used for [spf13.com](http://spf13.com/):
     </body>
     </html>
 
-To reference a partial template stored in a subfolder, e.g. `/layout/partials/post/tag/list.html`, call it this way: 
+To reference a partial template stored in a subfolder, e.g. `/layout/partials/post/tag/list.html`, call it this way:
 
      {{ partial "post/tag/list" . }}
 
-Note that the subdirectories you create under /layout/partials can be named whatever you like. 
+Note that the subdirectories you create under /layout/partials can be named whatever you like.
 
-**For more examples of referencing these templates, see [single content
-templates](/templates/content/), [list templates](/templates/list/) and [homepage templates](/templates/homepage/).**
+For more examples of referencing these templates, see
+[single content templates](/templates/content/),
+[list templates](/templates/list/) and
+[homepage templates](/templates/homepage/).
+
+
+Variable scoping
+----------------
+
+As you might have noticed, `partial` calls receive two paramters.
+
+1. The first is the name of the partial and determines the file
+location to be read.
+2. The second is the variables to be passed down to the partial.
+
+This means that the partial will _only_ be able to access those variables. It is
+isolated and has no access to the outer scope. From within the
+partial, `$.Var` is equivalent to `.Var`

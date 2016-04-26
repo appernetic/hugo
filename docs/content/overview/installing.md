@@ -1,6 +1,8 @@
+
 ---
 aliases:
 - /doc/installing/
+lastmod: 2016-01-04
 date: 2013-07-01
 menu:
   main:
@@ -35,7 +37,12 @@ Ideally, you should install it somewhere in your `PATH` for easy use.
 `/usr/local/bin` is the most probable location.
 
 On OS&nbsp;X, if you have [Homebrew](http://brew.sh/), installation is even
-easier: just run `brew install hugo`.
+easier: just run `brew update && brew install hugo`.
+
+For a more detailed explanation follow the corresponding installation guides:
+
+- [Installation on OS X]({{< relref "tutorials/installing-on-mac.md" >}})
+- [Installation on Windows]({{< relref "tutorials/installing-on-windows.md" >}})
 
 ### Installing Pygments (optional)
 
@@ -55,8 +62,7 @@ placed in your `PATH`.
 ### Prerequisite tools for downloading and building source code
 
 * [Git](http://git-scm.com/)
-* [Mercurial](http://mercurial.selenic.com/)
-* [Go][] 1.3+ (Go 1.4+ on Windows, see Go [Issue #8090](https://code.google.com/p/go/issues/detail?id=8090))
+* [Go][] 1.5+
 
 ### Get directly from GitHub
 

@@ -1,3 +1,16 @@
+// Copyright 2015 The Hugo Authors. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package helpers
 
 import (
@@ -19,22 +32,27 @@ import (
 func TestMakePath(t *testing.T) {
 	viper.Reset()
 	defer viper.Reset()
-	viper.Set("RemovePathAccents", true)
 
 	tests := []struct {
-		input    string
-		expected string
+		input         string
+		expected      string
+		removeAccents bool
 	}{
-		{"  Foo bar  ", "Foo-bar"},
-		{"Foo.Bar/foo_Bar-Foo", "Foo.Bar/foo_Bar-Foo"},
-		{"fOO,bar:foo%bAR", "fOObarfoobAR"},
-		{"FOo/BaR.html", "FOo/BaR.html"},
-		{"трям/трям", "трям/трям"},
-		{"은행", "은행"},
-		{"Банковский кассир", "Банковскии-кассир"},
+		{"  Foo bar  ", "Foo-bar", true},
+		{"Foo.Bar/foo_Bar-Foo", "Foo.Bar/foo_Bar-Foo", true},
+		{"fOO,bar:foobAR", "fOObarfoobAR", true},
+		{"FOo/BaR.html", "FOo/BaR.html", true},
+		{"трям/трям", "трям/трям", true},
+		{"은행", "은행", true},
+		{"Банковский кассир", "Банковскии-кассир", true},
+		// Issue #1488
+		{"संस्कृत", "संस्कृत", false},
+		{"a%C3%B1ame", "a%C3%B1ame", false},         // Issue #1292
+		{"this+is+a+test", "this+is+a+test", false}, // Issue #1290
 	}
 
 	for _, test := range tests {
+		viper.Set("RemovePathAccents", test.removeAccents)
 		output := MakePath(test.input)
 		if output != test.expected {
 			t.Errorf("Expected %#v, got %#v\n", test.expected, output)
@@ -42,20 +60,49 @@ func TestMakePath(t *testing.T) {
 	}
 }
 
-func TestMakePathToLower(t *testing.T) {
+func TestMakePathSanitized(t *testing.T) {
+	viper.Reset()
+	defer viper.Reset()
+
 	tests := []struct {
 		input    string
 		expected string
 	}{
 		{"  FOO bar  ", "foo-bar"},
 		{"Foo.Bar/fOO_bAr-Foo", "foo.bar/foo_bar-foo"},
-		{"FOO,bar:Foo%Bar", "foobarfoobar"},
+		{"FOO,bar:FooBar", "foobarfoobar"},
 		{"foo/BAR.HTML", "foo/bar.html"},
 		{"трям/трям", "трям/трям"},
 		{"은행", "은행"},
 	}
+
 	for _, test := range tests {
-		output := MakePathToLower(test.input)
+		output := MakePathSanitized(test.input)
+		if output != test.expected {
+			t.Errorf("Expected %#v, got %#v\n", test.expected, output)
+		}
+	}
+}
+
+func TestMakePathSanitizedDisablePathToLower(t *testing.T) {
+	viper.Reset()
+	defer viper.Reset()
+	viper.Set("DisablePathToLower", true)
+
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"  FOO bar  ", "FOO-bar"},
+		{"Foo.Bar/fOO_bAr-Foo", "Foo.Bar/fOO_bAr-Foo"},
+		{"FOO,bar:FooBar", "FOObarFooBar"},
+		{"foo/BAR.HTML", "foo/BAR.HTML"},
+		{"трям/трям", "трям/трям"},
+		{"은행", "은행"},
+	}
+
+	for _, test := range tests {
+		output := MakePathSanitized(test.input)
 		if output != test.expected {
 			t.Errorf("Expected %#v, got %#v\n", test.expected, output)
 		}
@@ -105,12 +152,12 @@ func TestMakePathRelative(t *testing.T) {
 	}
 
 	for i, d := range data {
-		output, _ := MakePathRelative(d.inPath, d.path1, d.path2)
+		output, _ := makePathRelative(d.inPath, d.path1, d.path2)
 		if d.output != output {
 			t.Errorf("Test #%d failed. Expected %q got %q", i, d.output, output)
 		}
 	}
-	_, error := MakePathRelative("a/b/c.ss", "/a/c", "/d/c", "/e/f")
+	_, error := makePathRelative("a/b/c.ss", "/a/c", "/d/c", "/e/f")
 
 	if error == nil {
 		t.Errorf("Test failed, expected error")
@@ -540,7 +587,7 @@ func TestFileAndExt(t *testing.T) {
 	}
 
 	for i, d := range data {
-		file, ext := FileAndExt(filepath.FromSlash(d.input), fpb)
+		file, ext := fileAndExt(filepath.FromSlash(d.input), fpb)
 		if d.expectedFile != file {
 			t.Errorf("Test %d failed. Expected filename %q got %q.", i, d.expectedFile, file)
 		}
@@ -593,11 +640,19 @@ func TestPrettifyPath(t *testing.T) {
 
 }
 
-func TestRemoveSubpaths(t *testing.T) {
-	got := RemoveSubpaths([]string{"hello", "hello/world", "foo/bar", ""})
-	expect := []string{"hello", "foo/bar"}
-	if !reflect.DeepEqual(got, expect) {
-		t.Errorf("Expected %q but got %q", expect, got)
+func TestExtractRootPaths(t *testing.T) {
+	tests := []struct {
+		input    []string
+		expected []string
+	}{{[]string{filepath.FromSlash("a/b"), filepath.FromSlash("a/b/c/"), "b",
+		filepath.FromSlash("/c/d"), filepath.FromSlash("d/"), filepath.FromSlash("//e//")},
+		[]string{"a", "a", "b", "c", "d", "e"}}}
+
+	for _, test := range tests {
+		output := ExtractRootPaths(test.input)
+		if !reflect.DeepEqual(output, test.expected) {
+			t.Errorf("Expected %#v, got %#v\n", test.expected, output)
+		}
 	}
 }
 
@@ -715,13 +770,14 @@ func TestGetTempDir(t *testing.T) {
 		expected string
 	}{
 		{"", dir},
-		{testDir + "  Foo bar  ", dir + testDir + "--Foo-bar" + FilePathSeparator},
+		{testDir + "  Foo bar  ", dir + testDir + "  Foo bar  " + FilePathSeparator},
 		{testDir + "Foo.Bar/foo_Bar-Foo", dir + testDir + "Foo.Bar/foo_Bar-Foo" + FilePathSeparator},
-		{testDir + "fOO,bar:foo%bAR", dir + testDir + "fOObarfoobAR" + FilePathSeparator},
+		{testDir + "fOO,bar:foo%bAR", dir + testDir + "fOObarfoo%bAR" + FilePathSeparator},
+		{testDir + "fOO,bar:foobAR", dir + testDir + "fOObarfoobAR" + FilePathSeparator},
 		{testDir + "FOo/BaR.html", dir + testDir + "FOo/BaR.html" + FilePathSeparator},
 		{testDir + "трям/трям", dir + testDir + "трям/трям" + FilePathSeparator},
 		{testDir + "은행", dir + testDir + "은행" + FilePathSeparator},
-		{testDir + "Банковский кассир", dir + testDir + "Банковский-кассир" + FilePathSeparator},
+		{testDir + "Банковский кассир", dir + testDir + "Банковский кассир" + FilePathSeparator},
 	}
 
 	for _, test := range tests {

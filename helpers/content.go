@@ -1,9 +1,9 @@
-// Copyright © 2014 Steve Francia <spf@spf13.com>.
+// Copyright 2015 The Hugo Authors. All rights reserved.
 //
-// Licensed under the Simple Public License, Version 2.0 (the "License");
+// Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
-// http://opensource.org/licenses/Simple-2.0
+// http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,9 +21,12 @@ import (
 	"bytes"
 	"html/template"
 	"os/exec"
+	"unicode/utf8"
 
 	"github.com/miekg/mmark"
+	"github.com/mitchellh/mapstructure"
 	"github.com/russross/blackfriday"
+	"github.com/spf13/cast"
 	bp "github.com/spf13/hugo/bufferpool"
 	jww "github.com/spf13/jwalterweatherman"
 	"github.com/spf13/viper"
@@ -32,28 +35,56 @@ import (
 	"sync"
 )
 
-// Length of the summary that Hugo extracts from a content.
+// SummaryLength is the length of the summary that Hugo extracts from a content.
 var SummaryLength = 70
 
-// Custom divider <!--more--> let's user define where summarization ends.
+// SummaryDivider denotes where content summarization should end. The default is "<!--more-->".
 var SummaryDivider = []byte("<!--more-->")
 
 // Blackfriday holds configuration values for Blackfriday rendering.
 type Blackfriday struct {
-	AngledQuotes   bool
-	Fractions      bool
-	PlainIDAnchors bool
-	Extensions     []string
-	ExtensionsMask []string
+	Smartypants                      bool
+	AngledQuotes                     bool
+	Fractions                        bool
+	HrefTargetBlank                  bool
+	SmartDashes                      bool
+	LatexDashes                      bool
+	PlainIDAnchors                   bool
+	SourceRelativeLinksEval          bool
+	SourceRelativeLinksProjectFolder string
+	Extensions                       []string
+	ExtensionsMask                   []string
 }
 
-// NewBlackfriday creates a new Blackfriday with some sane defaults.
+// NewBlackfriday creates a new Blackfriday filled with site config or some sane defaults.
 func NewBlackfriday() *Blackfriday {
-	return &Blackfriday{
-		AngledQuotes:   false,
-		Fractions:      true,
-		PlainIDAnchors: false,
+	combinedParam := map[string]interface{}{
+		"smartypants":                      true,
+		"angledQuotes":                     false,
+		"fractions":                        true,
+		"hrefTargetBlank":                  false,
+		"smartDashes":                      true,
+		"latexDashes":                      true,
+		"plainIDAnchors":                   true,
+		"sourceRelativeLinks":              false,
+		"sourceRelativeLinksProjectFolder": "/docs/content",
 	}
+
+	siteParam := viper.GetStringMap("blackfriday")
+	if siteParam != nil {
+		siteConfig := cast.ToStringMap(siteParam)
+
+		for key, value := range siteConfig {
+			combinedParam[key] = value
+		}
+	}
+
+	combinedConfig := &Blackfriday{}
+	if err := mapstructure.Decode(combinedParam, combinedConfig); err != nil {
+		jww.FATAL.Printf("Failed to get site rendering config\n%s", err.Error())
+	}
+
+	return combinedConfig
 }
 
 var blackfridayExtensionMap = map[string]int{
@@ -71,6 +102,7 @@ var blackfridayExtensionMap = map[string]int{
 	"headerIds":              blackfriday.EXTENSION_HEADER_IDS,
 	"titleblock":             blackfriday.EXTENSION_TITLEBLOCK,
 	"autoHeaderIds":          blackfriday.EXTENSION_AUTO_HEADER_IDS,
+	"backslashLineBreak":     blackfriday.EXTENSION_BACKSLASH_LINE_BREAK,
 	"definitionLists":        blackfriday.EXTENSION_DEFINITION_LISTS,
 }
 
@@ -118,8 +150,8 @@ func StripHTML(s string) string {
 	return b.String()
 }
 
-// StripEmptyNav strips out empty <nav> tags from content.
-func StripEmptyNav(in []byte) []byte {
+// stripEmptyNav strips out empty <nav> tags from content.
+func stripEmptyNav(in []byte) []byte {
 	return bytes.Replace(in, []byte("<nav>\n</nav>\n\n"), []byte(``), -1)
 }
 
@@ -128,8 +160,8 @@ func BytesToHTML(b []byte) template.HTML {
 	return template.HTML(string(b))
 }
 
-// GetHtmlRenderer creates a new Renderer with the given configuration.
-func GetHTMLRenderer(defaultFlags int, ctx *RenderingContext) blackfriday.Renderer {
+// getHTMLRenderer creates a new Blackfriday HTML Renderer with the given configuration.
+func getHTMLRenderer(defaultFlags int, ctx *RenderingContext) blackfriday.Renderer {
 	renderParameters := blackfriday.HtmlRendererParameters{
 		FootnoteAnchorPrefix:       viper.GetString("FootnoteAnchorPrefix"),
 		FootnoteReturnLinkContents: viper.GetString("FootnoteReturnLinkContents"),
@@ -144,9 +176,11 @@ func GetHTMLRenderer(defaultFlags int, ctx *RenderingContext) blackfriday.Render
 
 	htmlFlags := defaultFlags
 	htmlFlags |= blackfriday.HTML_USE_XHTML
-	htmlFlags |= blackfriday.HTML_USE_SMARTYPANTS
-	htmlFlags |= blackfriday.HTML_SMARTYPANTS_LATEX_DASHES
 	htmlFlags |= blackfriday.HTML_FOOTNOTE_RETURN_LINKS
+
+	if ctx.getConfig().Smartypants {
+		htmlFlags |= blackfriday.HTML_USE_SMARTYPANTS
+	}
 
 	if ctx.getConfig().AngledQuotes {
 		htmlFlags |= blackfriday.HTML_SMARTYPANTS_ANGLED_QUOTES
@@ -156,16 +190,43 @@ func GetHTMLRenderer(defaultFlags int, ctx *RenderingContext) blackfriday.Render
 		htmlFlags |= blackfriday.HTML_SMARTYPANTS_FRACTIONS
 	}
 
-	return blackfriday.HtmlRendererWithParameters(htmlFlags, "", "", renderParameters)
+	if ctx.getConfig().HrefTargetBlank {
+		htmlFlags |= blackfriday.HTML_HREF_TARGET_BLANK
+	}
+
+	if ctx.getConfig().SmartDashes {
+		htmlFlags |= blackfriday.HTML_SMARTYPANTS_DASHES
+	}
+
+	if ctx.getConfig().LatexDashes {
+		htmlFlags |= blackfriday.HTML_SMARTYPANTS_LATEX_DASHES
+	}
+
+	return &HugoHTMLRenderer{
+		FileResolver: ctx.FileResolver,
+		LinkResolver: ctx.LinkResolver,
+		Renderer:     blackfriday.HtmlRendererWithParameters(htmlFlags, "", "", renderParameters),
+	}
 }
 
 func getMarkdownExtensions(ctx *RenderingContext) int {
-	flags := 0 | blackfriday.EXTENSION_NO_INTRA_EMPHASIS |
-		blackfriday.EXTENSION_TABLES | blackfriday.EXTENSION_FENCED_CODE |
-		blackfriday.EXTENSION_AUTOLINK | blackfriday.EXTENSION_STRIKETHROUGH |
-		blackfriday.EXTENSION_SPACE_HEADERS | blackfriday.EXTENSION_FOOTNOTES |
-		blackfriday.EXTENSION_HEADER_IDS | blackfriday.EXTENSION_AUTO_HEADER_IDS |
+	// Default Blackfriday common extensions
+	commonExtensions := 0 |
+		blackfriday.EXTENSION_NO_INTRA_EMPHASIS |
+		blackfriday.EXTENSION_TABLES |
+		blackfriday.EXTENSION_FENCED_CODE |
+		blackfriday.EXTENSION_AUTOLINK |
+		blackfriday.EXTENSION_STRIKETHROUGH |
+		blackfriday.EXTENSION_SPACE_HEADERS |
+		blackfriday.EXTENSION_HEADER_IDS |
+		blackfriday.EXTENSION_BACKSLASH_LINE_BREAK |
 		blackfriday.EXTENSION_DEFINITION_LISTS
+
+	// Extra Blackfriday extensions that Hugo enables by default
+	flags := commonExtensions |
+		blackfriday.EXTENSION_AUTO_HEADER_IDS |
+		blackfriday.EXTENSION_FOOTNOTES
+
 	for _, extension := range ctx.getConfig().Extensions {
 		if flag, ok := blackfridayExtensionMap[extension]; ok {
 			flags |= flag
@@ -180,18 +241,18 @@ func getMarkdownExtensions(ctx *RenderingContext) int {
 }
 
 func markdownRender(ctx *RenderingContext) []byte {
-	return blackfriday.Markdown(ctx.Content, GetHTMLRenderer(0, ctx),
+	return blackfriday.Markdown(ctx.Content, getHTMLRenderer(0, ctx),
 		getMarkdownExtensions(ctx))
 }
 
 func markdownRenderWithTOC(ctx *RenderingContext) []byte {
 	return blackfriday.Markdown(ctx.Content,
-		GetHTMLRenderer(blackfriday.HTML_TOC, ctx),
+		getHTMLRenderer(blackfriday.HTML_TOC, ctx),
 		getMarkdownExtensions(ctx))
 }
 
-// mmark
-func GetMmarkHtmlRenderer(defaultFlags int, ctx *RenderingContext) mmark.Renderer {
+// getMmarkHTMLRenderer creates a new mmark HTML Renderer with the given configuration.
+func getMmarkHTMLRenderer(defaultFlags int, ctx *RenderingContext) mmark.Renderer {
 	renderParameters := mmark.HtmlRendererParameters{
 		FootnoteAnchorPrefix:       viper.GetString("FootnoteAnchorPrefix"),
 		FootnoteReturnLinkContents: viper.GetString("FootnoteReturnLinkContents"),
@@ -207,10 +268,12 @@ func GetMmarkHtmlRenderer(defaultFlags int, ctx *RenderingContext) mmark.Rendere
 	htmlFlags := defaultFlags
 	htmlFlags |= mmark.HTML_FOOTNOTE_RETURN_LINKS
 
-	return mmark.HtmlRendererWithParameters(htmlFlags, "", "", renderParameters)
+	return &HugoMmarkHTMLRenderer{
+		mmark.HtmlRendererWithParameters(htmlFlags, "", "", renderParameters),
+	}
 }
 
-func GetMmarkExtensions(ctx *RenderingContext) int {
+func getMmarkExtensions(ctx *RenderingContext) int {
 	flags := 0
 	flags |= mmark.EXTENSION_TABLES
 	flags |= mmark.EXTENSION_FENCED_CODE
@@ -234,15 +297,9 @@ func GetMmarkExtensions(ctx *RenderingContext) int {
 	return flags
 }
 
-func MmarkRender(ctx *RenderingContext) []byte {
-	return mmark.Parse(ctx.Content, GetMmarkHtmlRenderer(0, ctx),
-		GetMmarkExtensions(ctx)).Bytes()
-}
-
-func MmarkRenderWithTOC(ctx *RenderingContext) []byte {
-	return mmark.Parse(ctx.Content,
-		GetMmarkHtmlRenderer(0, ctx),
-		GetMmarkExtensions(ctx)).Bytes()
+func mmarkRender(ctx *RenderingContext) []byte {
+	return mmark.Parse(ctx.Content, getMmarkHTMLRenderer(0, ctx),
+		getMmarkExtensions(ctx)).Bytes()
 }
 
 // ExtractTOC extracts Table of Contents from content.
@@ -266,7 +323,7 @@ func ExtractTOC(content []byte) (newcontent []byte, toc []byte) {
 	}
 
 	if startOfTOC < 0 {
-		return StripEmptyNav(content), toc
+		return stripEmptyNav(content), toc
 	}
 	// Need to peek ahead to see if this nav element is actually the right one.
 	correctNav := bytes.Index(content[startOfTOC:peekEnd], []byte(`<li><a href="#`))
@@ -282,13 +339,15 @@ func ExtractTOC(content []byte) (newcontent []byte, toc []byte) {
 }
 
 // RenderingContext holds contextual information, like content and configuration,
-// for a given content renderin.g
+// for a given content rendering.
 type RenderingContext struct {
-	Content    []byte
-	PageFmt    string
-	DocumentID string
-	Config     *Blackfriday
-	configInit sync.Once
+	Content      []byte
+	PageFmt      string
+	DocumentID   string
+	Config       *Blackfriday
+	FileResolver FileResolverFunc
+	LinkResolver LinkResolverFunc
+	configInit   sync.Once
 }
 
 func (c *RenderingContext) getConfig() *Blackfriday {
@@ -308,11 +367,11 @@ func RenderBytesWithTOC(ctx *RenderingContext) []byte {
 	case "markdown":
 		return markdownRenderWithTOC(ctx)
 	case "asciidoc":
-		return []byte(GetAsciidocContent(ctx.Content))
+		return []byte(getAsciidocContent(ctx.Content))
 	case "mmark":
-		return MmarkRenderWithTOC(ctx)
+		return mmarkRender(ctx)
 	case "rst":
-		return []byte(GetRstContent(ctx.Content))
+		return []byte(getRstContent(ctx.Content))
 	}
 }
 
@@ -324,11 +383,11 @@ func RenderBytes(ctx *RenderingContext) []byte {
 	case "markdown":
 		return markdownRender(ctx)
 	case "asciidoc":
-		return []byte(GetAsciidocContent(ctx.Content))
+		return []byte(getAsciidocContent(ctx.Content))
 	case "mmark":
-		return MmarkRender(ctx)
+		return mmarkRender(ctx)
 	case "rst":
-		return []byte(GetRstContent(ctx.Content))
+		return []byte(getRstContent(ctx.Content))
 	}
 }
 
@@ -352,15 +411,30 @@ func RemoveSummaryDivider(content []byte) []byte {
 	return bytes.Replace(content, SummaryDivider, []byte(""), -1)
 }
 
-// TruncateWords takes content and an int and shortens down the number
-// of words in the content down to the number of int.
-func TruncateWords(s string, max int) string {
-	words := strings.Fields(s)
-	if max > len(words) {
-		return strings.Join(words, " ")
+// TruncateWordsByRune truncates words by runes.
+func TruncateWordsByRune(words []string, max int) (string, bool) {
+	count := 0
+	for index, word := range words {
+		if count >= max {
+			return strings.Join(words[:index], " "), true
+		}
+		runeCount := utf8.RuneCountInString(word)
+		if len(word) == runeCount {
+			count++
+		} else if count+runeCount < max {
+			count += runeCount
+		} else {
+			for ri := range word {
+				if count >= max {
+					truncatedWords := append(words[:index], word[:ri])
+					return strings.Join(truncatedWords, " "), true
+				}
+				count++
+			}
+		}
 	}
 
-	return strings.Join(words[:max], " ")
+	return strings.Join(words, " "), false
 }
 
 // TruncateWordsToWholeSentence takes content and an int
@@ -384,9 +458,9 @@ func TruncateWordsToWholeSentence(words []string, max int) (string, bool) {
 	return strings.Join(words[:max], " "), true
 }
 
-// GetAsciidocContent calls asciidoctor or asciidoc as an external helper
+// getAsciidocContent calls asciidoctor or asciidoc as an external helper
 // to convert AsciiDoc content to HTML.
-func GetAsciidocContent(content []byte) string {
+func getAsciidocContent(content []byte) string {
 	cleanContent := bytes.Replace(content, SummaryDivider, []byte(""), 1)
 
 	path, err := exec.LookPath("asciidoctor")
@@ -400,7 +474,7 @@ func GetAsciidocContent(content []byte) string {
 	}
 
 	jww.INFO.Println("Rendering with", path, "...")
-	cmd := exec.Command(path, "--safe", "-")
+	cmd := exec.Command(path, "--no-header-footer", "--safe", "-")
 	cmd.Stdin = bytes.NewReader(cleanContent)
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -408,18 +482,12 @@ func GetAsciidocContent(content []byte) string {
 		jww.ERROR.Println(err)
 	}
 
-	asciidocLines := strings.Split(out.String(), "\n")
-	for i, line := range asciidocLines {
-		if strings.HasPrefix(line, "<body") {
-			asciidocLines = (asciidocLines[i+1 : len(asciidocLines)-3])
-		}
-	}
-	return strings.Join(asciidocLines, "\n")
+	return out.String()
 }
 
-// GetRstContent calls the Python script rst2html as an external helper
+// getRstContent calls the Python script rst2html as an external helper
 // to convert reStructuredText content to HTML.
-func GetRstContent(content []byte) string {
+func getRstContent(content []byte) string {
 	cleanContent := bytes.Replace(content, SummaryDivider, []byte(""), 1)
 
 	path, err := exec.LookPath("rst2html")
